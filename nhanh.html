@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>7-Band Visualizer Pro</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 10px; margin: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
+        
+        h2 { text-align: center; color: #ff0055; margin-bottom: 20px; }
+        .section { background: #1a1a1a; border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        .section-title { font-size: 16px; font-weight: bold; color: #aaa; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .control-group { margin-bottom: 10px; }
+        label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
+        
+        input[type="file"] { width: 100%; padding: 10px; background: #2a2a2a; color: white; border: none; border-radius: 5px; margin-bottom: 10px; font-size: 14px;}
+        select, input[type="number"] { width: 100%; padding: 10px; background: #2a2a2a; color: white; border: none; border-radius: 5px; font-size: 14px;}
+        input[type="range"] { width: 100%; accent-color: #ff0055; }
+        input[type="color"] { width: 100%; height: 40px; border: none; cursor: pointer; background: transparent; }
+        
+        canvas { width: 100%; border-radius: 10px; background: #000; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
+        
+        .btn-container { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+        button { flex: 1; padding: 12px; background: #ff0055; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        button.secondary { background: #333; border: 1px solid #555; }
+        button.loop-btn.active { background: #4CAF50; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        
+        .download-btn { display: block; text-align: center; margin-top: 10px; color: #4CAF50; font-weight: bold; text-decoration: none; font-size: 14px;}
+        .note { font-size: 11px; color: #777; margin-top: 10px; text-align: center; }
+        .status-msg { text-align: center; color: #FFD700; font-weight: bold; margin-top: 10px; display: none;}
+        video { width: 100%; border-radius: 10px; margin-top: 10px; display: none; background: #000; }
+        
+        .band-config { border-left: 3px solid #ff0055; padding-left: 10px; margin-bottom: 10px; }
+        .band-title { font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🎛️ 7-Band Visualizer Pro</h2>
+
+        <div class="section">
+            <div class="section-title">1. Nguồn & Điều khiển</div>
+            <input type="file" id="audioFile" accept="audio/*,video/mp4">
+            <div class="btn-container">
+                <button id="playBtn" class="secondary" disabled>▶️ Phát</button>
+                <button id="pauseBtn" class="secondary" disabled>⏸️ Tạm dừng</button>
+                <button id="loopBtn" class="secondary loop-btn" disabled>🔁 Lặp lại</button>
+                <button id="renderBtn" disabled>⬇️ Xuất Video</button>
+            </div>
+            <div class="btn-container">
+                <button id="stopBtn" class="secondary" style="display:none;">⏹️ Dừng ghi & Lưu</button>
+            </div>
+            <div class="control-group">
+                <label>Độ phân giải (Nhanh - Chậm):</label>
+                <select id="canvasRes">
+                    <option value="640x480" selected>Chuẩn 640x480 (Đã tối ưu)</option>
+                    <option value="480x360">Siêu nhanh 480x360 (Nhạc dài)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- CẤU HÌNH 7 DẢI TẦN -->
+        <div class="section">
+            <div class="section-title">2. Cấu hình 7 dải tần chuyên sâu (Pro)</div>
+            
+            <div class="band-config" style="border-left-color: #ff0055;">
+                <div class="band-title">🔊 Sub-bass (20-60 Hz)</div>
+                <div class="grid">
+                    <div><select id="type0"><option value="bar">Cột</option><option value="line">Tròn</option><option value="diamond">Thoi</option><option value="dots">Chấm</option><option value="ring">Vòng</option></select></div>
+                    <div><input type="range" id="scale0" min="0.5" max="3" step="0.1" value="1.5"></div>
+                </div>
+            </div>
+            
+            <div class="band-config" style="border-left-color: #ff5500;">
+                <div class="band-title">🎸 Bass (60-250 Hz)</div>
+                <div class="grid">
+                    <div><select id="type1"><option value="bar">Cột</option><option value="line">Tròn</option><option value="diamond">Thoi</option><option value="dots">Chấm</option><option value="ring">Vòng</option></select></div>
+                    <div><input type="range" id="scale1" min="0.5" max="3" step="0.1" value="1.5"></div>
+                </div>
+            </div>
+
+            <div class="band-config" style="border-left-color: #ffaa00;">
+                <div class="band-title">🎻 Low-mid (250-500 Hz)</div>
+                <div class="grid">
+                    <div><select id="type2"><option value="diamond">Thoi</option><option value="bar">Cột</option><option value="line">Tròn</option><option value="dots">Chấm</option><option value="ring">Vòng</option></select></div>
+                    <div><input type="range" id="scale2" min="0.5" max="3" step="0.1" value="1.2"></div>
+                </div>
+            </div>
+
+            <div class="band-config" style="border-left-color: #ffff00;">
+                <div class="band-title">🎤 Mid (500-2000 Hz)</div>
+                <div class="grid">
+                    <div><select id="type3"><option value="line">Tròn</option><option value="diamond">Thoi</option><option value="bar">Cột</option><option value="ring">Vòng</option><option value="spiral">Xoắn</option></select></div>
+                    <div><input type="range" id="scale3" min="0.5" max="3" step="0.1" value="1.0"></div>
+                </div>
+            </div>
+
+            <div class="band-config" style="border-left-color: #ccff00;">
+                <div class="band-title">🎺 Upper-mid (2000-4000 Hz)</div>
+                <div class="grid">
+                    <div><select id="type4"><option value="dots">Chấm</option><option value="triangle">Tam giác</option><option value="bar">Cột</option><option value="line">Tròn</option></select></div>
+                    <div><input type="range" id="scale4" min="0.5" max="3" step="0.1" value="0.8"></div>
+                </div>
+            </div>
+
+            <div class="band-config" style="border-left-color: #00ffcc;">
+                <div class="band-title">🎷 Presence (4000-6000 Hz)</div>
+                <div class="grid">
+                    <div><select id="type5"><option value="hex">Lục giác</option><option value="diamond">Thoi</option><option value="bar">Cột</option><option value="line">Tròn</option></select></div>
+                    <div><input type="range" id="scale5" min="0.5" max="3" step="0.1" value="0.7"></div>
+                </div>
+            </div>
+
+            <div class="band-config" style="border-left-color: #0088ff;">
+                <div class="band-title">✨ Treble (6000-20000 Hz)</div>
+                <div class="grid">
+                    <div><select id="type6"><option value="spiral">Xoắn</option><option value="triangle">Tam giác</option><option value="dots">Chấm</option><option value="hex">Lục giác</option></select></div>
+                    <div><input type="range" id="scale6" min="0.5" max="3" step="0.1" value="0.6"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">3. Màu sắc & Hiệu ứng</div>
+            <div class="grid">
+                <div><label>Màu Nền:</label><input type="color" id="bgColor" value="#000000"></div>
+                <div><label>Màu Gradient 1:</label><input type="color" id="color1" value="#ff0055"></div>
+                <div><label>Màu Gradient 2:</label><input type="color" id="color2" value="#ffaa00"></div>
+                <div><label>Màu Viền:</label><input type="color" id="strokeColor" value="#ffffff"></div>
+            </div>
+            <div class="control-group">
+                <label>Độ nhạy tổng thể (Chống bão hòa): <span id="sensitivityVal">1.2</span></label>
+                <input type="range" id="sensitivity" min="0.1" max="3" step="0.1" value="1.2" oninput="document.getElementById('sensitivityVal').textContent = this.value;">
+            </div>
+            <div class="control-group">
+                <label>Độ phát sáng (Glow): <span id="glowVal">10</span></label>
+                <input type="range" id="glow" min="0" max="30" value="10" oninput="document.getElementById('glowVal').textContent = this.value;">
+            </div>
+            <div class="control-group">
+                <label>Độ mượt dữ liệu (Smoothing): <span id="smoothVal">0.85</span></label>
+                <input type="range" id="smoothing" min="0.5" max="0.95" step="0.05" value="0.85" oninput="document.getElementById('smoothVal').textContent = this.value;">
+            </div>
+        </div>
+
+        <canvas id="previewCanvas"></canvas>
+
+        <div class="status-msg" id="statusMsg">🟢 Đang ghi hình... Bấm "Dừng ghi" để xem kết quả!</div>
+        
+        <div id="videoContainer">
+            <video id="outputVideo" controls></video>
+        </div>
+
+        <a id="downloadLink" class="download-btn" style="display:none;">⬇️ Tải Video Về Máy</a>
+        
+        <p class="note">⚠️ Lưu ý: Đã tự động chọn Codec MP4 cho iOS và WebM cho Android. Bản này ưu tiên tốc độ ổn định, giảm tải CPU.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('audioFile');
+        const renderBtn = document.getElementById('renderBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusMsg = document.getElementById('statusMsg');
+        const outputVideo = document.getElementById('outputVideo');
+        const downloadLink = document.getElementById('downloadLink');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const loopBtn = document.getElementById('loopBtn');
+
+        let audioCtx, source, analysers = [], filters = [];
+        let mediaRecorder;
+        let recordedChunks = [];
+        let animationId;
+        let audioEl;
+        let isRecording = false;
+
+        // 7 dải tần chuẩn
+        const bands = [
+            { name: 'Sub-bass', freq: 40 },
+            { name: 'Bass', freq: 150 },
+            { name: 'Low-mid', freq: 350 },
+            { name: 'Mid', freq: 1000 },
+            { name: 'Upper-mid', freq: 3000 },
+            { name: 'Presence', freq: 5000 },
+            { name: 'Treble', freq: 12000 }
+        ];
+
+        function setCanvasSize() {
+            const res = document.getElementById('canvasRes').value.split('x');
+            canvas.width = parseInt(res[0]);
+            canvas.height = parseInt(res[1]);
+        }
+        document.getElementById('canvasRes').addEventListener('change', setCanvasSize);
+        setCanvasSize();
+
+        // Xử lý file âm thanh
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (audioCtx) { audioCtx.close(); }
+
+            const audioUrl = URL.createObjectURL(file);
+            audioEl = new Audio(audioUrl);
+            
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            source = audioCtx.createMediaElementSource(audioEl);
+
+            // Tạo 7 bộ lọc riêng biệt cho 7 dải tần
+            filters = [];
+            analysers = [];
+            bands.forEach((band) => {
+                let filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = band.freq;
+                filter.Q.value = 1.1;
+
+                let analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512; // FFT nhỏ để chạy nhanh trên Mobile
+                
+                source.connect(filter);
+                filter.connect(analyser);
+                
+                filters.push(filter);
+                analysers.push(analyser);
+                
+                // Đưa âm thanh ra loa (mỗi filter có thể đấu nối tiếp, nhưng để nghe được full âm thanh, ta đấu source trực tiếp ra loa)
+                // Chú ý: Để nghe đầy đủ, ta cần đấu source ra loa
+            });
+            
+            // Đấu song song: Nguồn gốc ra loa để nghe bình thường
+            source.connect(audioCtx.destination);
+
+            // Setup Recorder (Tự động chọn codec MP4 cho iOS, WebM cho Android)
+            const canvasStream = canvas.captureStream(30);
+            const audioDest = audioCtx.createMediaStreamDestination();
+            source.connect(audioDest);
+            const combinedStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                ...audioDest.stream.getAudioTracks()
+            ]);
+
+            let mimeType = 'video/webm;codecs=vp8';
+            if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+                mimeType = 'video/mp4;codecs=avc1';
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                mimeType = 'video/webm;codecs=vp9';
+            }
+
+            mediaRecorder = new MediaRecorder(combinedStream, { mimeType });
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) recordedChunks.push(event.data);
+            };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                
+                outputVideo.src = url;
+                outputVideo.style.display = 'block';
+                downloadLink.href = url;
+                downloadLink.download = 'visualizer.' + (mimeType.includes('mp4') ? 'mp4' : 'webm');
+                downloadLink.style.display = 'block';
+                
+                renderBtn.disabled = false;
+                renderBtn.textContent = "⬇️ Xuất Video";
+                stopBtn.style.display = 'none';
+                statusMsg.style.display = 'none';
+                isRecording = false;
+                cancelAnimationFrame(animationId);
+            };
+
+            // Kích hoạt nút
+            playBtn.disabled = false;
+            pauseBtn.disabled = false;
+            loopBtn.disabled = false;
+            renderBtn.disabled = false;
+
+            audioEl.onended = () => {
+                if (isRecording) stopRecording();
+            };
+
+            draw();
+        });
+
+        // Nút Phát / Pause / Loop
+        playBtn.addEventListener('click', async () => {
+            await audioCtx.resume();
+            audioEl.play();
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            audioEl.pause();
+        });
+
+        loopBtn.addEventListener('click', () => {
+            audioEl.loop = !audioEl.loop;
+            loopBtn.classList.toggle('active', audioEl.loop);
+        });
+
+        // Nút Xuất Video
+        renderBtn.addEventListener('click', async () => {
+            if (!mediaRecorder) return;
+            await audioCtx.resume();
+            await audioEl.play();
+
+            recordedChunks = [];
+            mediaRecorder.start(1000); 
+            isRecording = true;
+
+            renderBtn.disabled = true;
+            renderBtn.textContent = "🟢 Đang ghi...";
+            stopBtn.style.display = 'block';
+            statusMsg.style.display = 'block';
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (isRecording) stopRecording();
+        });
+
+        function stopRecording() {
+            if (mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+        }
+
+        // Hàm vẽ 7 dải tần số
+        function draw() {
+            animationId = requestAnimationFrame(draw);
+            
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = document.getElementById('bgColor').value;
+            ctx.fillRect(0, 0, width, height);
+            
+            if (!analysers.length) return;
+
+            // Lấy độ nhạy, độ mượt tổng
+            const sensitivity = parseFloat(document.getElementById('sensitivity').value);
+            const smoothing = parseFloat(document.getElementById('smoothing').value);
+            const glow = parseInt(document.getElementById('glow').value);
+
+            const g1 = document.getElementById('color1').value;
+            const g2 = document.getElementById('color2').value;
+            const strokeColor = document.getElementById('strokeColor').value;
+
+            ctx.shadowBlur = glow;
+            ctx.shadowColor = g1;
+
+            // Mỗi dải tần chiếm 1/7 chiều rộng màn hình
+            const bandWidth = width / 7;
+
+            for (let b = 0; b < 7; b++) {
+                const analyser = analysers[b];
+                analyser.smoothingTimeConstant = smoothing;
+                
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+
+                // Lấy kiểu dáng và độ cao riêng của dải này
+                const type = document.getElementById('type' + b).value;
+                const scale = parseFloat(document.getElementById('scale' + b).value);
+
+                const numBars = 10; // 10 thanh con trong mỗi dải
+                const totalSpacing = bandWidth / numBars;
+                const barWidth = Math.max(1, totalSpacing * 0.6);
+                const step = Math.floor(dataArray.length / numBars);
+
+                for (let i = 0; i < numBars; i++) {
+                    // Chống bão hòa: Dùng hàm Power để nén biên độ
+                    let value = Math.pow(dataArray[i * step] / 255, 1.5) * sensitivity;
+                    value = Math.min(value, 1.0);
+
+                    let barHeight = (value * height * 0.85) * scale;
+                    if (barHeight < 2) barHeight = 2;
+
+                    let x = (b * bandWidth) + (i * totalSpacing) + (totalSpacing - barWidth) / 2;
+                    let y = height - barHeight;
+
+                    const grad = ctx.createLinearGradient(0, y, 0, height);
+                    grad.addColorStop(0, g2);
+                    grad.addColorStop(1, g1);
+                    ctx.fillStyle = grad;
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = 1;
+
+                    ctx.beginPath();
+                    if (type === 'bar') { 
+                        ctx.roundRect(x, y, barWidth, barHeight, 5); 
+                    } else if (type === 'line') { 
+                        ctx.arc(x + barWidth / 2, y + barHeight / 2, barWidth / 2, 0, Math.PI * 2); 
+                    } else if (type === 'diamond') { 
+                        ctx.moveTo(x + barWidth / 2, y); ctx.lineTo(x + barWidth, y + barHeight / 2); ctx.lineTo(x + barWidth / 2, y + barHeight); ctx.lineTo(x, y + barHeight / 2); ctx.closePath(); 
+                    } else if (type === 'dots') { 
+                        ctx.arc(x + barWidth / 2, y + barHeight / 2, Math.min(barWidth, barHeight) / 2, 0, Math.PI * 2); 
+                    } else if (type === 'ring') { 
+                        ctx.arc(x + barWidth / 2, y + barHeight / 2, Math.min(barWidth, barHeight) / 2, 0, Math.PI * 2); ctx.stroke(); continue;
+                    } else if (type === 'triangle') { 
+                        ctx.moveTo(x + barWidth / 2, y); ctx.lineTo(x + barWidth, y + barHeight); ctx.lineTo(x, y + barHeight); ctx.closePath(); 
+                    } else if (type === 'hex') { 
+                        let r = barWidth / 2; let cx = x + barWidth / 2; let cy = y + barHeight / 2;
+                        for(let k=0; k<6; k++) { let angle = k * Math.PI / 3; let px = cx + r * Math.cos(angle); let py = cy + r * Math.sin(angle); if(k===0) ctx.moveTo(px, py); else ctx.lineTo(px, py); } ctx.closePath(); 
+                    } else if (type === 'spiral') { 
+                        ctx.arc(x + barWidth / 2, y + barHeight / 2, Math.max(barWidth, barHeight) / 2, 0, Math.PI); ctx.stroke(); continue;
+                    }
+
+                    ctx.fill();
+                    if (document.getElementById('strokeColor').value !== '#000000') {
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
